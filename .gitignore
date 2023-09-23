@@ -2,3 +2,4 @@
 sfenv/
 .vscode/
 __pycache__/
+website/node_modules/
