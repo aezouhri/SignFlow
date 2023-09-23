@@ -1,2 +1,4 @@
 ./sfenv
 sfenv/
+.vscode/
+__pycache__/
