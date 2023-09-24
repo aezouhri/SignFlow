@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
+
 // Set the desired width and height for the loader
 const width = 640;
 const height = 465;
@@ -23,6 +24,8 @@ document.body.appendChild(renderer.domElement);
 const group = new THREE.Group();
 scene.add(group);
 
+const socket = new WebSocket('ws://localhost:8000');
+
 // Access the video and canvas elements
 const videoElement = document.getElementById('videoElement');
 const canvasElement = document.getElementById('canvasElement');
@@ -42,6 +45,42 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 } else {
     console.error('getUserMedia is not supported by this browser.');
 }
+
+
+function sendFrame() {
+    canvasContext.drawImage(videoElement, 0, 0, width, height);
+    const imageData = canvasElement.toDataURL('image/jpeg');
+    socket.send(imageData);
+    requestAnimationFrame(sendFrame);
+}
+
+// Start sending video frames when the WebSocket is open
+socket.addEventListener('open', (event) => {
+    console.log('WebSocket connection opened.');
+    // sendFrame();
+});
+
+// Handle incoming processed frames from the server
+socket.addEventListener('message', (event) => {
+    // Convert the received frame data back to an image
+    const img = new Image();
+    img.src = event.data;
+
+    // Display the processed frame on the webpage (e.g., in a <img> element)
+    // Replace 'processedFrameElement' with the ID of your HTML element for displaying the processed frame
+    const processedFrameElement = document.getElementById('processedFrameElement');
+    processedFrameElement.src = img.src;
+});
+
+// Handle WebSocket errors
+socket.addEventListener('error', (event) => {
+    console.error('WebSocket error:', event);
+});
+
+// Handle WebSocket closure
+socket.addEventListener('close', (event) => {
+    console.log('WebSocket connection closed:', event);
+});
 
 // Load the GLB model
 const loader = new GLTFLoader();
@@ -95,7 +134,11 @@ loader.load('hand/hand_animated_v6.glb', function (gltf) {
                 playAnimationByName(animationName)            }
         });
         
-        function playAnimationByName(animationName) {
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+          }
+
+          async function playAnimationByName(animationName) {
             const animations = [];
             for (let i = 0; i < animationName.length; i++) {
                 animations.push(`${animationName[i]}_hand`);
@@ -106,25 +149,24 @@ loader.load('hand/hand_animated_v6.glb', function (gltf) {
             mixer.stopAllAction();
         
             // Play the animations if found with a delay between each animation
-            animations.forEach((anim, index) => {
+            for (const anim of animations) {
                 const clip = gltf.animations.find((animation) => animation.name === anim);
                 if (clip) {
                     const action = mixer.clipAction(clip);
                     action.reset(); // Reset the animation to its initial state
                     action.timeScale = -1; // Set the animation speed to 1 (normal speed)
                     action.play();
-                    
                 } else {
                     console.log(`Animation '${anim}' not found.`);
                 }
-            });
+            };
         
             // Update the mixer in the animation loop
             function updateAnimation() {
                 mixer.update(0.001); // Update the animation
                 requestAnimationFrame(updateAnimation);
             }
-            setTimeout(updateAnimation() , 500);
+            updateAnimation()
         }
 
     }

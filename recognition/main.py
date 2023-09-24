@@ -28,7 +28,7 @@ async def process_frames(websocket, path):
         while True:
             # Receive the frame from the client
             frame = await websocket.recv()
-
+            print("Received")
             # Convert the frame to a numpy array
             np_frame = np.frombuffer(frame, dtype=np.uint8)
             image = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
@@ -101,12 +101,12 @@ async def process_frames(websocket, path):
             # Convert the processed image back to bytes
             _, encoded_image = cv2.imencode('.jpg', image)
             processed_frame = encoded_image.tobytes()
-
+            print("about to send to cli")
             # Send the processed frame back to the client
             await websocket.send(processed_frame)
 
 # Start the WebSocket server
-start_server = websockets.serve(process_frames, 'localhost', 8765)
+start_server = websockets.serve('localhost', 8000, origins=["http://localhost:5173"])
 
 # Run the event loop
 asyncio.get_event_loop().run_until_complete(start_server)
