@@ -24,7 +24,7 @@ document.body.appendChild(renderer.domElement);
 const group = new THREE.Group();
 scene.add(group);
 
-const socket = new WebSocket('ws://localhost:8000');
+const socket = new WebSocket('ws://localhost:8001');
 
 // Access the video and canvas elements
 const videoElement = document.getElementById('videoElement');
@@ -49,27 +49,37 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 
 function sendFrame() {
     canvasContext.drawImage(videoElement, 0, 0, width, height);
-    const imageData = canvasElement.toDataURL('image/jpeg');
-    socket.send(imageData);
+    const imageData = canvasElement.toDataURL('image/jpeg'); // Convert canvas image data to base64 string
+    const byteCharacters = atob(imageData.split(',')[1]); // Remove the data URL prefix and convert to byte characters
+    const byteNumbers = new Array(byteCharacters.length); // Create an array to store the byte values
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i); // Convert each character to a byte value
+    }
+    const byteArray = new Uint8Array(byteNumbers); // Create a Uint8Array from the byte values
+
+    socket.send(byteArray.buffer); // Send the byte array as an ArrayBuffer
     requestAnimationFrame(sendFrame);
 }
 
 // Start sending video frames when the WebSocket is open
 socket.addEventListener('open', (event) => {
     console.log('WebSocket connection opened.');
-    // sendFrame();
+    sendFrame();
 });
 
 // Handle incoming processed frames from the server
 socket.addEventListener('message', (event) => {
-    // Convert the received frame data back to an image
-    const img = new Image();
-    img.src = event.data;
+    const imageData = event.data; // Received image data
 
-    // Display the processed frame on the webpage (e.g., in a <img> element)
-    // Replace 'processedFrameElement' with the ID of your HTML element for displaying the processed frame
+    // Create a Blob from the image data
+    const blob = new Blob([imageData], { type: 'image/jpeg' });
+
+    // Generate a URL for the blob
+    const imageUrl = URL.createObjectURL(blob);
+
+    // Set the src attribute of the processedFrameElement to the generated URL
     const processedFrameElement = document.getElementById('processedFrameElement');
-    processedFrameElement.src = img.src;
+    processedFrameElement.src = imageUrl;
 });
 
 // Handle WebSocket errors
