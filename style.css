@@ -3,9 +3,22 @@ body {
     background-color: #f2f2f2;
 }
 
-.model-section {
-    background-color: #f2f2f2;
+.container {
+    display: flex; /* Use flexbox to create a side-by-side layout */
+}
+
+.video-section {
+    flex: 1; /* Take up 50% of the container width */
     padding: 20px;
     margin: 20px;
     border-radius: 5px;
+    background-color: #f2f2f2;
+}
+
+.model-section {
+    flex: 1; /* Take up 50% of the container width */
+    padding: 20px;
+    margin: 20px;
+    border-radius: 5px;
+    background-color: #f2f2f2;
 }

@@ -6,13 +6,22 @@
     <link rel="stylesheet" href="style.css"> <!-- Link the external CSS file -->
 </head>
 <body>
-    <div>
-        Test
+    Signflow, your Sign Language and Fingerspelling buddy!
+    <div class="container">
+        <div class="video-section">
+            <video id="videoElement" autoplay></video> <!-- Add a video element to display the camera feed -->
+            <canvas id="canvasElement"></canvas> <!-- Add a canvas element to display the processed frames -->
+        </div>
+        <div class="model-section">
+            <!-- Add the model display here -->
+            <input type="text" id="animationInput"> <!-- Add an input element for animation name -->
+            <button id="submitButton">Submit</button> <!-- Add a submit button -->
+        </div>
     </div>
 
-    <input type="text" id="animationInput"> <!-- Add an input element for animation name -->
-    <button id="submitButton">Submit</button> <!-- Add a submit button -->
-
+    
+    
     <script type="module" src="script.js"></script>
+    
 </body>
 </html>

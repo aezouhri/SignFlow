@@ -2,47 +2,44 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import pickle
+import asyncio
+import websockets
 
 # Initialize Mediapipe Hand module
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
-
+# Load the letter classification model
 def load_model(model_path):
     with open(model_path, "rb") as model_file:
         model_dict = pickle.load(model_file)
         model = model_dict["model"]
     return model
 
-
-def webcam():
-    # Open video capture
-    cap = cv2.VideoCapture(1)
-    letter_model = load_model("classifier\classify_letter_model.p")
+# Process the received frames
+async def process_frames(websocket, path):
+    letter_model = load_model("classifier/classify_letter_model.p")
     with mp_hands.Hands(
         static_image_mode=False,
         max_num_hands=2,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     ) as hands:
-        while cap.isOpened():
-            success, image = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                continue
+        while True:
+            # Receive the frame from the client
+            frame = await websocket.recv()
 
-            top_right = (image.shape[1] - 200, 30)
-            top_left = (10, 30)
-            # Flip the image horizontally for a later selfie-view display
-            image = cv2.flip(image, 1)
-            # Convert the image to RGB
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # Convert the frame to a numpy array
+            np_frame = np.frombuffer(frame, dtype=np.uint8)
+            image = cv2.imdecode(np_frame, cv2.IMREAD_COLOR)
 
             # Process the image with Mediapipe
-            results = hands.process(image)
+            results = hands.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
 
             # Draw hand landmarks on the image
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            top_right = (image.shape[1] - 200, 30)
+            top_left = (10, 30)
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
                     wrist_pos = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
@@ -75,6 +72,7 @@ def webcam():
                             (0, 0, 255),
                             2,
                         )
+
                     else:
                         left_hand = "Left Hand"
                     mp_drawing.draw_landmarks(
@@ -100,20 +98,16 @@ def webcam():
                         2,
                     )
 
-            # Display the image
-            cv2.imshow("Hand Gestures", image)
+            # Convert the processed image back to bytes
+            _, encoded_image = cv2.imencode('.jpg', image)
+            processed_frame = encoded_image.tobytes()
 
-            # Break the loop if 'q' is pressed
-            if (
-                cv2.waitKey(1) & 0xFF == ord("q")
-                or cv2.getWindowProperty("Hand Gestures", cv2.WND_PROP_VISIBLE) < 1
-            ):
-                break
+            # Send the processed frame back to the client
+            await websocket.send(processed_frame)
 
-    # Release the video capture and close all windows
-    cap.release()
-    cv2.destroyAllWindows()
+# Start the WebSocket server
+start_server = websockets.serve(process_frames, 'localhost', 8765)
 
-
-if __name__ == "__main__":
-    webcam()
+# Run the event loop
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()

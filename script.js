@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 // Set the desired width and height for the loader
-const width = 400;
-const height = 400;
+const width = 640;
+const height = 465;
 
 // Create a scene
 const scene = new THREE.Scene();
@@ -23,6 +23,26 @@ document.body.appendChild(renderer.domElement);
 const group = new THREE.Group();
 scene.add(group);
 
+// Access the video and canvas elements
+const videoElement = document.getElementById('videoElement');
+const canvasElement = document.getElementById('canvasElement');
+const canvasContext = canvasElement.getContext('2d');
+
+// Check if the browser supports getUserMedia
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // Request access to the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+            // Set the video source to the camera stream
+            videoElement.srcObject = stream;
+        })
+        .catch(function(error) {
+            console.error('Error accessing the camera:', error);
+        });
+} else {
+    console.error('getUserMedia is not supported by this browser.');
+}
+
 // Load the GLB model
 const loader = new GLTFLoader();
 loader.load('hand/hand_animated_v6.glb', function (gltf) {
@@ -32,10 +52,15 @@ loader.load('hand/hand_animated_v6.glb', function (gltf) {
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     model.position.sub(center);
+    model.position.y -= 2; // Move the model more down
 
     // Scale the model
-    const scaleFactor = 0.7;
+    const scaleFactor = 0.9;
     model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+    // Add the model to the model section
+    const modelSection = document.querySelector('.model-section');
+    modelSection.appendChild(renderer.domElement);
 
     group.add(model);
 
@@ -73,14 +98,6 @@ loader.load('hand/hand_animated_v6.glb', function (gltf) {
         function playAnimationByName(animationName) {
             const animations = [];
             for (let i = 0; i < animationName.length; i++) {
-                // const anim = `${animationName[i]}_${animationName[i + 1]}_trans`;
-                // const clip = gltf.animations.find((animation) => animation.name === anim);
-                // if (clip) {
-                //     animations.push(anim);
-                // } 
-                // else {
-                //     animations.push(`${animationName[i]}_hand`);
-                // }
                 animations.push(`${animationName[i]}_hand`);
             }
             console.log(animations);
@@ -88,27 +105,26 @@ loader.load('hand/hand_animated_v6.glb', function (gltf) {
             // Stop any currently playing animation
             mixer.stopAllAction();
         
-            // Play the animations if found
-            animations.forEach((anim) => {
+            // Play the animations if found with a delay between each animation
+            animations.forEach((anim, index) => {
                 const clip = gltf.animations.find((animation) => animation.name === anim);
                 if (clip) {
                     const action = mixer.clipAction(clip);
                     action.reset(); // Reset the animation to its initial state
-                    action.timeScale = 1; // Set the animation speed to 1 (normal speed)
-                    action.play(); // Play the animation
+                    action.timeScale = -1; // Set the animation speed to 1 (normal speed)
+                    action.play();
+                    
                 } else {
                     console.log(`Animation '${anim}' not found.`);
                 }
-                    
-                console.log(anim);
             });
         
             // Update the mixer in the animation loop
             function updateAnimation() {
-                mixer.update(0.4166666567325592); // Update the animation
+                mixer.update(0.001); // Update the animation
                 requestAnimationFrame(updateAnimation);
             }
-            updateAnimation();
+            setTimeout(updateAnimation() , 500);
         }
 
     }
